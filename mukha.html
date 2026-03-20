@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Муха</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 420px;
+            padding: 24px 20px;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+        }
+        .screen.active { display: flex; }
+
+        h1 { font-size: 2.8em; text-align: center; }
+        h2 { font-size: 1.8em; text-align: center; }
+
+        /* --- Settings --- */
+        .settings-group { width: 100%; }
+        .settings-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 1.1em;
+            color: #aaa;
+        }
+        .settings-group .val {
+            font-weight: bold;
+            color: #e94560;
+            font-size: 1.2em;
+        }
+        input[type=range] {
+            width: 100%;
+            accent-color: #e94560;
+            height: 6px;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            padding: 16px 24px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            transition: opacity 0.15s;
+        }
+        .btn:active { opacity: 0.75; }
+        .btn-primary { background: #e94560; color: white; }
+
+        .action-buttons {
+            display: flex;
+            gap: 14px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-continue {
+            flex: 1;
+            background: #27ae60;
+            color: white;
+            font-size: 1.5em;
+            padding: 36px 12px;
+            border-radius: 18px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.15s;
+            line-height: 1.3;
+        }
+        .btn-stop {
+            flex: 1;
+            background: #c0392b;
+            color: white;
+            font-size: 1.5em;
+            padding: 36px 12px;
+            border-radius: 18px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.15s;
+            line-height: 1.3;
+        }
+        .btn-mine {
+            flex: 1;
+            background: #e67e22;
+            color: white;
+            font-size: 1.5em;
+            padding: 36px 12px;
+            border-radius: 18px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.15s;
+            line-height: 1.3;
+        }
+        .btn-continue:active, .btn-stop:active, .btn-mine:active { opacity: 0.75; }
+
+        /* --- Grid --- */
+        .grid-wrap {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        .grid {
+            display: grid;
+            gap: 5px;
+        }
+        .cell {
+            width: 52px;
+            height: 52px;
+            border: 2px solid #2e2e4e;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6em;
+            background: #16213e;
+            transition: background 0.2s;
+        }
+        /* small grid on small screens */
+        @media (max-width: 360px) {
+            .cell { width: 42px; height: 42px; font-size: 1.3em; }
+            .grid { gap: 3px; }
+        }
+
+        /* --- Preview --- */
+        .countdown {
+            font-size: 5em;
+            font-weight: bold;
+            color: #e94560;
+            line-height: 1;
+        }
+
+        /* --- Game --- */
+        .move-counter {
+            font-size: 1em;
+            color: #888;
+            align-self: flex-end;
+        }
+        .direction-box {
+            background: #0f3460;
+            border-radius: 18px;
+            padding: 28px 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 2.6em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            border: 2px solid #1a4a8a;
+        }
+        .hint {
+            font-size: 0.95em;
+            color: #666;
+            text-align: center;
+        }
+
+        /* --- Result --- */
+        .result-icon { font-size: 5em; line-height: 1; }
+        .result-msg {
+            font-size: 1.15em;
+            text-align: center;
+            line-height: 1.6;
+            color: #ccc;
+        }
+        .result-moves {
+            font-size: 1.1em;
+            color: #e94560;
+            font-weight: bold;
+        }
+
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: #2e2e4e;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== НАЛАШТУВАННЯ ===== -->
+<div id="screen-settings" class="screen active">
+    <h1>🪰 Муха</h1>
+
+    <div class="settings-group">
+        <label>Розмір поля: <span class="val" id="lbl-size">5</span> × <span class="val" id="lbl-size2">5</span></label>
+        <input type="range" id="inp-size" min="3" max="9" value="5" step="2">
+    </div>
+
+    <div class="settings-group">
+        <label>Кількість мін: <span class="val" id="lbl-mines">3</span></label>
+        <input type="range" id="inp-mines" min="0" max="12" value="3">
+    </div>
+
+    <div class="settings-group">
+        <label>Час показу поля: <span class="val" id="lbl-time">3</span> сек</label>
+        <input type="range" id="inp-time" min="1" max="10" value="3">
+    </div>
+
+    <div class="divider"></div>
+    <button class="btn btn-primary" onclick="startGame()">▶ Почати гру</button>
+</div>
+
+<!-- ===== ЗАПАМ'ЯТАЙ ПОЛЕ ===== -->
+<div id="screen-preview" class="screen">
+    <h2>Запам'ятай поле!</h2>
+    <div class="grid-wrap">
+        <div class="grid" id="preview-grid"></div>
+    </div>
+    <div class="countdown" id="countdown">3</div>
+</div>
+
+<!-- ===== ГРА ===== -->
+<div id="screen-game" class="screen">
+    <div class="move-counter" id="move-counter">Хід: 0</div>
+    <div class="direction-box" id="direction-box">...</div>
+    <div class="hint">Муха може туди йти?</div>
+    <div class="action-buttons" style="flex-direction:column; gap:12px;">
+        <button class="btn-continue" style="padding:28px 12px; font-size:1.6em;" onclick="answer('go')">ДАЛІ<br><small style="font-size:0.55em">✓ безпечно</small></button>
+        <div style="display:flex; gap:12px; width:100%;">
+            <button class="btn-stop" style="flex:1; padding:22px 8px; font-size:1.3em;" onclick="answer('stop')">СТОП<br><small style="font-size:0.55em">межа</small></button>
+            <button class="btn-mine" style="flex:1; padding:22px 8px; font-size:1.3em;" onclick="answer('mine')">МІНА 💣<br><small style="font-size:0.55em">знешкодити</small></button>
+        </div>
+    </div>
+    <div id="mine-msg" style="display:none; font-size:1.1em; color:#2ecc71; font-weight:bold; text-align:center;"></div>
+</div>
+
+<!-- ===== РЕЗУЛЬТАТ ===== -->
+<div id="screen-result" class="screen">
+    <div class="result-icon" id="result-icon"></div>
+    <h2 id="result-title"></h2>
+    <div class="result-msg" id="result-msg"></div>
+    <div class="result-moves" id="result-moves"></div>
+    <div class="divider"></div>
+    <button class="btn btn-primary" onclick="goSettings()">↩ Грати знову</button>
+</div>
+
+<script>
+// ─── Константи ───────────────────────────────────────────────────────────────
+const DIRS = [
+    { name: 'Вліво',  tts: 'Left',  dx: -1, dy:  0 },
+    { name: 'Вправо', tts: 'Right', dx:  1, dy:  0 },
+    { name: 'Вгору',  tts: 'Up',    dx:  0, dy: -1 },
+    { name: 'Вниз',   tts: 'Down',  dx:  0, dy:  1 },
+];
+
+// ─── Стан гри ────────────────────────────────────────────────────────────────
+let G = {};
+
+// ─── Налаштування — слайдери ──────────────────────────────────────────────────
+const inpSize  = document.getElementById('inp-size');
+const inpMines = document.getElementById('inp-mines');
+const inpTime  = document.getElementById('inp-time');
+
+function updateSizeLabel() {
+    const v = inpSize.value;
+    document.getElementById('lbl-size').textContent  = v;
+    document.getElementById('lbl-size2').textContent = v;
+    // обмежити кількість мін
+    const max = Math.floor(v * v * 0.4);
+    inpMines.max = max;
+    if (parseInt(inpMines.value) > max) {
+        inpMines.value = max;
+        updateMinesLabel();
+    }
+}
+function updateMinesLabel() {
+    document.getElementById('lbl-mines').textContent = inpMines.value;
+}
+function updateTimeLabel() {
+    document.getElementById('lbl-time').textContent = inpTime.value;
+}
+inpSize.addEventListener('input',  updateSizeLabel);
+inpMines.addEventListener('input', updateMinesLabel);
+inpTime.addEventListener('input',  updateTimeLabel);
+
+// ─── Екрани ──────────────────────────────────────────────────────────────────
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+function goSettings() { showScreen('screen-settings'); }
+
+// ─── Старт гри ───────────────────────────────────────────────────────────────
+function startGame() {
+    const size    = parseInt(inpSize.value);
+    const nMines  = parseInt(inpMines.value);
+    const previewSec = parseInt(inpTime.value);
+    const center  = Math.floor(size / 2);
+
+    G = {
+        size,
+        previewSec,
+        mines: new Set(),
+        flyX: center,
+        flyY: center,
+        moves: 0,
+        currentDir: null,
+    };
+
+    // Розставити міни (не на старті)
+    const pool = [];
+    for (let y = 0; y < size; y++)
+        for (let x = 0; x < size; x++)
+            if (!(x === center && y === center))
+                pool.push(`${x},${y}`);
+
+    shuffle(pool);
+    for (let i = 0; i < Math.min(nMines, pool.length); i++)
+        G.mines.add(pool[i]);
+
+    renderPreview();
+    showScreen('screen-preview');
+    runCountdown();
+}
+
+// ─── Попередній перегляд поля ─────────────────────────────────────────────────
+function renderPreview() {
+    const grid = document.getElementById('preview-grid');
+    grid.style.gridTemplateColumns = `repeat(${G.size}, 1fr)`;
+    grid.innerHTML = '';
+
+    // адаптивний розмір клітинки
+    const cellPx = Math.min(52, Math.floor((window.innerWidth - 60) / G.size));
+    grid.style.gap = '4px';
+
+    for (let y = 0; y < G.size; y++) {
+        for (let x = 0; x < G.size; x++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.style.width  = cellPx + 'px';
+            cell.style.height = cellPx + 'px';
+            cell.style.fontSize = (cellPx * 0.45) + 'px';
+
+            const key = `${x},${y}`;
+            if (x === G.flyX && y === G.flyY) cell.textContent = '🪰';
+            else if (G.mines.has(key))         cell.textContent = '💣';
+
+            grid.appendChild(cell);
+        }
+    }
+}
+
+function runCountdown() {
+    let n = G.previewSec;
+    const el = document.getElementById('countdown');
+    el.textContent = n;
+    const t = setInterval(() => {
+        n--;
+        if (n > 0) {
+            el.textContent = n;
+        } else {
+            clearInterval(t);
+            showScreen('screen-game');
+            nextTurn();
+        }
+    }, 1000);
+}
+
+// ─── Ігровий хід ─────────────────────────────────────────────────────────────
+function nextTurn() {
+    const dir = DIRS[Math.floor(Math.random() * DIRS.length)];
+    G.currentDir = dir;
+
+    document.getElementById('direction-box').textContent = dir.name;
+    document.getElementById('move-counter').textContent  = `Хід: ${G.moves}`;
+
+    speak(dir.tts);
+}
+
+// ─── Відповідь гравця ─────────────────────────────────────────────────────────
+function answer(btn) {
+    const { dx, dy } = G.currentDir;
+    const nx = G.flyX + dx;
+    const ny = G.flyY + dy;
+
+    const outOfBounds = nx < 0 || nx >= G.size || ny < 0 || ny >= G.size;
+    const onMine      = G.mines.has(`${nx},${ny}`);
+
+    if (btn === 'mine') {
+        if (onMine) {
+            G.mines.delete(`${nx},${ny}`);
+            showMineMsg('💣 Міну знешкоджено! Продовжуємо...');
+            setTimeout(() => { hideMineMsg(); nextTurn(); }, 1400);
+        } else {
+            endGame(false, outOfBounds ? 'Там немає міни — це межа поля!' : 'Там не було міни!');
+        }
+        return;
+    }
+
+    if (btn === 'stop') {
+        if (outOfBounds) {
+            endGame(true, 'Правильно! Муха вийшла б за межі.');
+        } else {
+            endGame(false, onMine ? 'Там міна — натискай МІНА, а не СТОП!' : 'Хід був безпечний, але ти зупинився.');
+        }
+        return;
+    }
+
+    // btn === 'go'
+    if (outOfBounds) {
+        endGame(false, 'Муха вийшла за межі поля!');
+    } else if (onMine) {
+        endGame(false, 'Муха потрапила на міну!');
+    } else {
+        G.flyX = nx;
+        G.flyY = ny;
+        G.moves++;
+        nextTurn();
+    }
+}
+
+function showMineMsg(text) {
+    const el = document.getElementById('mine-msg');
+    el.textContent = text;
+    el.style.display = 'block';
+}
+function hideMineMsg() {
+    document.getElementById('mine-msg').style.display = 'none';
+}
+
+// ─── Кінець гри ──────────────────────────────────────────────────────────────
+function endGame(win, msg) {
+    document.getElementById('result-icon').textContent  = win ? '🏆' : '💀';
+    document.getElementById('result-title').textContent = win ? 'Перемога!' : 'Програш!';
+    document.getElementById('result-msg').textContent   = msg;
+    document.getElementById('result-moves').textContent = `Успішних ходів: ${G.moves}`;
+    speak(win ? 'Victory!' : 'Defeat!');
+    showScreen('screen-result');
+}
+
+// ─── TTS ─────────────────────────────────────────────────────────────────────
+let ttsVoice = null;
+
+function loadVoices() {
+    const voices = window.speechSynthesis.getVoices();
+    ttsVoice = voices.find(v => v.lang.startsWith('en'))
+            || voices[0]
+            || null;
+}
+
+if ('speechSynthesis' in window) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang  = 'en-US';
+    utt.rate  = 0.9;
+    utt.pitch = 1;
+    if (ttsVoice) utt.voice = ttsVoice;
+    window.speechSynthesis.speak(utt);
+}
+
+// ─── Утиліти ─────────────────────────────────────────────────────────────────
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+}
+</script>
+</body>
+</html>
